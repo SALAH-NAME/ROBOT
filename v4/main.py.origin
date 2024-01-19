@@ -3,13 +3,6 @@
 import cv2
 import mediapipe as mp
 import math
-import socket
-
-
-serverMAXAddress = '98:DA:60:00:57:23'
-port = 1
-s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-s.connect((serverMAXAddress, port))
 
 # Initialize MediaPipe Hands module.
 mp_hands = mp.solutions.hands
@@ -23,7 +16,7 @@ def classify_gesture(hand_landmarks):
     # Check for invalid landmark coordinates.
     for lm in hand_landmarks.landmark:
         if not (0 <= lm.x < 1 and 0 <= lm.y < 1):
-            return "I"
+            return "INVALID"
 
 
 
@@ -50,7 +43,7 @@ def classify_gesture(hand_landmarks):
 
     # Check if all fingertips are close to their respective DIP joints.
     if all(dist for dist in [index_dist, middle_dist, ring_dist, pinky_dist]):
-        return "x"
+        return "STOP"
 
 
 
@@ -72,20 +65,20 @@ def classify_gesture(hand_landmarks):
 
     # Classify the left or right gesture based on the angle.
     if (0 <= angle_deg < angle_threshold_deg) or (360 - angle_threshold_deg <= angle_deg < 360):
-        return "a"
+        return "LEFT"
     elif (180 - angle_threshold_deg <= angle_deg < 180 + angle_threshold_deg):
-        return "d"
+        return "RIGHT"
 
     # Calculate normalized vertical component.
     vertical = index_fingertip.y - wrist.y
 
     # Classify the vertical gesture.
     if vertical < -vertical_threshold:
-        return "w"
+        return "FORWARD"
     elif vertical > vertical_threshold:
-        return "s"
+        return "BACK"
     
-    return "x"
+    return "STOP"
 
 # Start capturing video from the default camera.
 cap = cv2.VideoCapture(0)
@@ -113,7 +106,6 @@ while cap.isOpened():
             # Draw the white text on top of the rectangle
             cv2.putText(image, gesture, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
             print(gesture)
-            s.send(gesture.encode())
 
     cv2.imshow('Hand Gesture Recognition', image)
 
@@ -122,4 +114,4 @@ while cap.isOpened():
 
 cap.release()
 cv2.destroyAllWindows()
-s.close()
+
